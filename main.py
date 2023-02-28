@@ -29,9 +29,38 @@ class TestDB(db.Model):
 
 
 
+class UserForm(FlaskForm):
+    name = StringField("Enter your name here", validators=[DataRequired()])
+    email = StringField("Enter your email here", validators=[DataRequired()])
+    submit =  SubmitField("Submit")
+
 class test(FlaskForm):
     name = StringField("Enter your name here", validators=[DataRequired()])
+    email = StringField("Enter your email here", validators=[DataRequired()])
     submit =  SubmitField("Submit")
+
+
+
+
+
+@app.route('/Users/Add',methods=['POST','GET'])
+def Add():
+    name = None
+    form = UserForm()
+
+    if form.validate_on_submit():
+        user = TestDB.query.filter_by(email = form.email.data).first()
+        if user is None:
+            user = TestDB(name = form.name.data, email = form.email.data)
+            db.session.add(user)
+            db.session.commit()    
+        name = form.name.data
+        form.name.data = ''
+        form.email.data = ''
+        flash("User added successfully!!")
+    our_users = TestDB.query.order_by(TestDB.datetime_created)
+    return render_template('add_user.html',name=name,form=form,our_users=our_users)
+
 
 
 
