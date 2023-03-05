@@ -11,39 +11,33 @@
 
 
     {% if name %}
-        <h3>hello {{name}}!!</h3>
+        <h3>Update User!!</h3>
         <br><br>
         {% for user in our_users %}
-             {{user.id}}.<a href="{{url_for('update',id=user.id )}}">{{user.name}}</a>({{user.email}})-{{user.fav_color}}-
-             <a href="{{url_for('delete',id=user.id )}}">delete</a><br>
+             {{user.id}}--{{user.name}}({{user.email}})-{{user.fav_color}}<br>
         {% endfor %}
     {% else %}
     <div class="shadow p-3 mb-5 bg-body-tertiary rounded">
-        <h2>Users List</h2>
+        <h2>Update user...</h2>
         <br>
-        <form method="post">
+        <form action="/Update/{{name_to_update.id}}" method="post">
             {{form.hidden_tag()}}
             {{form.name.label(class="form-label")}}
-            {{form.name(class="form-control")}}
+            {{form.name(class="form-control",value = name_to_update.name)}}
             <br>
             {{form.email.label(class="form-label")}}
-            {{form.email(class="form-control")}}
+            {{form.email(class="form-control",value = name_to_update.email)}}
             <br>
             {{form.fav_color.label(class="form-label")}}
-            {{form.fav_color(class="form-control")}}
+            {{form.fav_color(class="form-control",value = name_to_update.fav_color)}}
             <br>
             {{form.submit(class="btn btn-secondary")}}
+
+            <a href="{{url_for('delete',id=id )}}" class = "btn btn-danger">Delete</a>
         </form> 
     </div>    
         <br><br>
-        <table class="table table-hover table-striped table-bordered">
-        {% for user in our_users %}
-        <tr>
-             <td>{{user.id}}.<a href="{{url_for('update',id=user.id )}}">{{user.name}}</a>({{user.email}})-{{user.fav_color}}
-            -<a href="{{url_for('delete',id=user.id )}}">delete</a></td>
-        </tr>
-        {% endfor %}
-    </table>
+        
 
     {% endif %}
         
