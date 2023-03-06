@@ -1,4 +1,4 @@
-from flask import Flask, render_template,flash,request
+from flask import Flask, render_template,flash,request,url_for,redirect
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, ValidationError
 from wtforms.validators import DataRequired, EqualTo, Length
@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from wtforms.widgets import TextArea
 import os
 
 
@@ -28,7 +29,21 @@ def date():
     datet = datetime.utcnow()
     return {"Date": datet}
 
+#Posts Model
 
+class Posts(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(1000),nullable=False)
+    content = db.Column(db.Text,nullable=False)
+    author = db.Column(db.String(255))
+    date_posted = db.Column(db.DateTime,default = datetime.utcnow())
+    slug = db.Column(db.String(255))
+    hidden = db.Column(db.Boolean, default=False)
+    
+
+
+
+#Test Model (Can be used as users model with few changes)
 class TestDB(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     name = db.Column(db.String(75),nullable=False)
@@ -55,7 +70,7 @@ class TestDB(db.Model):
     def __repr__(self):
         return '<Name %r>' % self.name
     
-
+#-------------------------------------------------------------FORMS-------------------------------------------------------------#
 
 
 class UserForm(FlaskForm):
@@ -70,7 +85,27 @@ class test(FlaskForm):
     name = StringField("Enter your name here", validators=[DataRequired()])
     submit =  SubmitField("Submit")
 
+#Posts Form
+class PostForm(FlaskForm):
+    title = StringField("Enter your title here", validators=[DataRequired()])
+    content = StringField("Enter your content here", validators=[DataRequired()],widget=TextArea())
+    author =  StringField("Enter your author here", validators=[DataRequired()])
+    slug = StringField("Enter your slug here", validators=[DataRequired()])
+    submit = SubmitField("Submit")
 
+
+
+@app.route('/add_post', methods=['POST','GET'])
+def add_post():
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Posts(title = form.title.data, content = form.content.data, author = form.author.data ,slug = form.slug.data)
+        db.session.add(post)
+        db.session.commit()
+        flash("Post added successfully!!")
+        return redirect(url_for('add_post'))
+    
+    return render_template('add_post.html',form=form)
 
 
 
