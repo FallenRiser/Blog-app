@@ -21,7 +21,12 @@ db.init_app(app)
 app.app_context().push()
 migrate = Migrate(app , db)
 
+#JSON thing
 
+@app.route('/date')
+def date():
+    datet = datetime.utcnow()
+    return {"Date": datet}
 
 
 class TestDB(db.Model):
