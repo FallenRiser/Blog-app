@@ -1,11 +1,14 @@
 from flask import Flask, render_template,flash,request
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms import StringField, SubmitField, PasswordField, BooleanField, ValidationError
+from wtforms.validators import DataRequired, EqualTo, Length
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
+
+
 
 current_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
@@ -26,7 +29,23 @@ class TestDB(db.Model):
     name = db.Column(db.String(75),nullable=False)
     email = db.Column(db.String(150),nullable=False,unique=True)
     fav_color = db.Column(db.String(50))
+    password_hash = db.Column(db.String(128),nullable=False)
     datetime_created = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
+    @property
+    def password(self):
+        raise AttributeError('password is not in a readable format')
+    
+    @password.setter
+    def password(self,password):
+        self.password_hash = generate_password_hash(password)
+
+
+    def verify_password(self,password):
+        return check_password_hash(self.password_hash, password)
+
 
     def __repr__(self):
         return '<Name %r>' % self.name
@@ -38,6 +57,8 @@ class UserForm(FlaskForm):
     name = StringField("Enter your name here", validators=[DataRequired()])
     email = StringField("Enter your email here", validators=[DataRequired()])
     fav_color = StringField("Enter your Favourite color")
+    password_hash = PasswordField("Enter your password",validators=[DataRequired(), EqualTo('password_hash2',message='Passwords must match.')])
+    password_hash2 = PasswordField("Enter your password again",validators=[DataRequired()])
     submit =  SubmitField("Submit")
 
 class test(FlaskForm):
@@ -56,13 +77,15 @@ def Add():
     if form.validate_on_submit():
         user = TestDB.query.filter_by(email = form.email.data).first()
         if user is None:
-            user = TestDB(name = form.name.data, email = form.email.data, fav_color = form.fav_color.data)
+            hashed_pass = generate_password_hash(form.password_hash.data,"sha256") 
+            user = TestDB(name = form.name.data, email = form.email.data, fav_color = form.fav_color.data, password_hash = hashed_pass)
             db.session.add(user)
             db.session.commit()    
         name = form.name.data
         form.name.data = ''
         form.email.data = ''
         form.fav_color.data=''
+        form.password_hash.data = ''
         flash("User added successfully!!")
     our_users = TestDB.query.order_by(TestDB.datetime_created)
     return render_template('add_user.html',name=name,form=form,our_users=our_users)
