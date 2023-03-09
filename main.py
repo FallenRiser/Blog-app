@@ -95,6 +95,18 @@ class PostForm(FlaskForm):
 
 
 
+@app.route('/posts')
+def posts():
+    posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
+    return render_template('posts.html',posts = posts)
+
+
+@app.route('/posts/<int:id>')
+def post(id):
+    post = Posts.query.get_or_404(id)
+    return render_template('post.html',post = post)
+
+
 @app.route('/add_post', methods=['POST','GET'])
 def add_post():
     form = PostForm()
