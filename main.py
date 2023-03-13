@@ -120,6 +120,26 @@ def add_post():
     return render_template('add_post.html',form=form)
 
 
+@app.route('/post/edit/<int:id>', methods=['POST','GET'])
+def edit_post(id):
+    post = Posts.query.get_or_404(id)
+    form = PostForm()
+    if form.validate_on_submit():
+        post.title = form.title.data
+        post.author = form.author.data
+        post.slug = form.slug.data
+        post.content = form.content.data
+
+        db.session.add(post)
+        db.session.commit()
+        flash("Post updated successfully")
+        return redirect(url_for('post',id=post.id))
+    form.title.data = post.title
+    form.author.data = post.author
+    form.slug.data = post.slug
+    form.content.data = post.content
+    return render_template('edit_post.html',form=form)
+
 
 @app.route('/Users/Add',methods=['POST','GET'])
 def Add():
