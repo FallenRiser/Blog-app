@@ -7,13 +7,14 @@ from flask_migrate import Migrate
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms.widgets import TextArea
+from flask_login import UserMixin, login_user, login_required, LoginManager, logout_user, current_user
 import os
 
 
 
 current_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'+ os.path.join(current_dir,"test.db")
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'+ os.path.join(current_dir,"BlogApp.db")
 app.config['SECRET_KEY'] = 'this key is super dooper se bhi Uper VaLa SecRET'
 
 
@@ -21,6 +22,17 @@ db = SQLAlchemy()
 db.init_app(app)
 app.app_context().push()
 migrate = Migrate(app , db)
+
+#Login Manager Stuff
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Users.query.get(int(user_id))
+
 
 #JSON thing
 
@@ -44,8 +56,10 @@ class Posts(db.Model):
 
 
 #Test Model (Can be used as users model with few changes)
-class TestDB(db.Model):
+#Now it is Users model 
+class Users(db.Model,UserMixin):
     id = db.Column(db.Integer, primary_key = True)
+    username = db.Column(db.String(32),nullable=False,unique=True)
     name = db.Column(db.String(75),nullable=False)
     email = db.Column(db.String(150),nullable=False,unique=True)
     fav_color = db.Column(db.String(50))
@@ -75,6 +89,7 @@ class TestDB(db.Model):
 
 class UserForm(FlaskForm):
     name = StringField("Enter your name here", validators=[DataRequired()])
+    username = StringField("Enter your username here", validators=[DataRequired()])
     email = StringField("Enter your email here", validators=[DataRequired()])
     fav_color = StringField("Enter your Favourite color")
     password_hash = PasswordField("Enter your password",validators=[DataRequired(), EqualTo('password_hash2',message='Passwords must match.')])
@@ -94,6 +109,44 @@ class PostForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
+#Login Form
+class LoginForm(FlaskForm):
+    username = StringField("Username", validators=[DataRequired()])
+    password = PasswordField("Password", validators=[DataRequired()])
+    submit = SubmitField("Submit")
+
+
+#Login route
+@app.route('/login',methods=['GET','POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = Users.query.filter_by(username = form.username.data).first()
+        if user:
+            if(check_password_hash(user.password_hash, form.password.data)):
+                login_user(user)
+                flash("Login Succesfull!!")
+                return redirect(url_for('dashboard'))
+            else:
+                flash("Wrong Password... Try again!!")
+        else:
+            flash("User does not exists!!")        
+
+    return render_template('login.html',form = form)
+
+#dashboard route
+@app.route('/dashboard',methods = ['GET','POST'])
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
+
+#logout route
+@app.route('/logout', methods = ['GET','POST'])
+@login_required
+def logout():
+    logout_user()
+    flash("Logged out succesfully!")
+    return redirect(url_for('login'))
 
 @app.route('/posts')
 def posts():
@@ -141,32 +194,44 @@ def edit_post(id):
     return render_template('edit_post.html',form=form)
 
 
+@app.route('/post/delete/<int:id>')
+def delete_post(id):
+    post_to_delete = Posts.query.get_or_404(id)
+
+    try:
+        db.session.delete(post_to_delete)
+        db.session.commit()
+        flash("Post deleted successfully")
+        posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
+        return render_template('posts.html',posts = posts)
+    except: 
+        flash("Oops something went wrong...")
+        posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
+        return render_template('posts.html',posts = posts)   
+
 @app.route('/Users/Add',methods=['POST','GET'])
-def Add():
+def add():
     name = None
     form = UserForm()
 
     if form.validate_on_submit():
-        user = TestDB.query.filter_by(email = form.email.data).first()
+        user = Users.query.filter_by(email = form.email.data).first()
         if user is None:
             hashed_pass = generate_password_hash(form.password_hash.data,"sha256") 
-            user = TestDB(name = form.name.data, email = form.email.data, fav_color = form.fav_color.data, password_hash = hashed_pass)
+            user = Users(username = form.username.data, name = form.name.data, email = form.email.data, fav_color = form.fav_color.data, password_hash = hashed_pass)
             db.session.add(user)
             db.session.commit()    
         name = form.name.data
-        form.name.data = ''
-        form.email.data = ''
-        form.fav_color.data=''
-        form.password_hash.data = ''
         flash("User added successfully!!")
-    our_users = TestDB.query.order_by(TestDB.datetime_created)
+        return redirect(url_for('add'))
+    our_users = Users.query.order_by( Users.datetime_created)
     return render_template('add_user.html',name=name,form=form,our_users=our_users)
 
 
 
 @app.route('/delete/<int:id>')
 def delete(id):
-    user_to_delete = TestDB.query.get_or_404(id)
+    user_to_delete =  Users.query.get_or_404(id)
     name = None
     form = UserForm()
 
@@ -174,11 +239,11 @@ def delete(id):
         db.session.delete(user_to_delete)
         db.session.commit()
         flash("User deleted successfully!!")
-        our_users = TestDB.query.order_by(TestDB.datetime_created)
+        our_users = Users.query.order_by( Users.datetime_created)
         return render_template('add_user.html',name=name,form=form,our_users=our_users)
     except:    
         flash("Oops!.. There was an error deleting the user") 
-        our_users = TestDB.query.order_by(TestDB.datetime_created)
+        our_users = Users.query.order_by( Users.datetime_created)
         return render_template('add_user.html',name=name,form=form,our_users=our_users)
         
 
@@ -187,7 +252,7 @@ def delete(id):
 @app.route('/Update/<int:id>',methods=['POST','GET'])
 def update(id):
     form = UserForm()
-    name_to_update = TestDB.query.get_or_404(id)
+    name_to_update =  Users.query.get_or_404(id)
 
     if request.method == 'POST':
         name_to_update.name = request.form['name']

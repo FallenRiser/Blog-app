@@ -26,6 +26,9 @@
             {{form.name.label(class="form-label")}}
             {{form.name(class="form-control")}}
             <br>
+            {{form.username.label(class="form-label")}}
+            {{form.username(class="form-control")}}
+            <br>
             {{form.email.label(class="form-label")}}
             {{form.email(class="form-control")}}
             <br>
@@ -45,7 +48,7 @@
         <table class="table table-hover table-striped table-bordered">
         {% for user in our_users %}
         <tr>
-             <td>{{user.id}}.<a href="{{url_for('update',id=user.id )}}">{{user.name}}</a>({{user.email}})-{{user.fav_color}}
+             <td>{{user.id}}.<a href="{{url_for('update',id=user.id )}}">{{user.username}}</a>({{user.email}})-{{user.fav_color}}
             -password = {{user.password_hash}}-<a href="{{url_for('delete',id=user.id )}}">delete</a></td>
         </tr>
         {% endfor %}
