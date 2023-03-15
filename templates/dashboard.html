@@ -24,6 +24,7 @@
           <strong>Favourite Colour : {{current_user.fav_color}}</strong><br>
           <strong>Date Joined : {{current_user.datetime_created}}</strong><br></p>
         <a href="{{url_for('logout' )}}" class="btn btn-secondary btn-sm">Logout</a>
+        <a href="{{url_for('update',id=current_user.id )}}" class = "btn btn-secondary btn-sm">Update Profile</a>
       </div>
     </div>
     
