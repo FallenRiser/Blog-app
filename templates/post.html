@@ -13,9 +13,11 @@
             {{ post.poster.username }}<br>
             {{ post.slug}}|{{post.date_posted}}<br>
             {{post.content}}<br>
-      </div>    
+      </div>
+      {% if post.poster.id == current_user.id %}    
       <a href="{{url_for('edit_post',id = post.id)}}" class="btn btn-outline-secondary">Edit Post</a>
       <a href="{{url_for('delete_post',id = post.id)}}" class="btn btn-outline-danger">Delete Post</a>
+      {% endif %}
       <a href="{{ url_for('posts')}}" class="btn btn-outline-secondary">Back to blog</a>
 
 {% endblock %} 

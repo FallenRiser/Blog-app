@@ -163,36 +163,47 @@ def edit_post(id):
     form = PostForm()
     if form.validate_on_submit():
         post.title = form.title.data
-        post.author = form.author.data
         post.slug = form.slug.data
         post.content = form.content.data
-
         db.session.add(post)
         db.session.commit()
         flash("Post updated successfully")
         return redirect(url_for('post',id=post.id))
-    form.title.data = post.title
-    form.author.data = post.author
-    form.slug.data = post.slug
-    form.content.data = post.content
-    return render_template('edit_post.html',form=form)
+    
+    if current_user.id == post.poster_id:
+        form.title.data = post.title
+        form.slug.data = post.slug
+        form.content.data = post.content
+        return render_template('edit_post.html',form=form)
+    else:
+        flash("You aren't authorized to update this post!!")
+        posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
+        return render_template('posts.html',posts = posts)
+    
 
-
+    
 @app.route('/post/delete/<int:id>')
 @login_required
 def delete_post(id):
+    
     post_to_delete = Posts.query.get_or_404(id)
-
-    try:
-        db.session.delete(post_to_delete)
-        db.session.commit()
-        flash("Post deleted successfully")
+    id = current_user.id
+    if id == post_to_delete.poster_id:
+        try:
+            db.session.delete(post_to_delete)
+            db.session.commit()
+            flash("Post deleted successfully")
+            posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
+            return render_template('posts.html',posts = posts)
+        except: 
+            flash("Oops something went wrong...")
+            posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
+            return render_template('posts.html',posts = posts)   
+    else:
+        flash("You aren't authorized to delete this post!!!!")
         posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
         return render_template('posts.html',posts = posts)
-    except: 
-        flash("Oops something went wrong...")
-        posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
-        return render_template('posts.html',posts = posts)   
+
 
 @app.route('/Users/Add',methods=['POST','GET'])
 def add():
