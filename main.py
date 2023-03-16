@@ -1,5 +1,6 @@
 from flask import Flask, render_template,flash,request,url_for,redirect
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData
 from flask_migrate import Migrate
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -14,8 +15,20 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'+ os.path.join(current_dir,"BlogApp.db")
 app.config['SECRET_KEY'] = 'this key is super dooper se bhi Uper VaLa SecRET'
 
+####################################################### METADATA #####################################################################
 
-db = SQLAlchemy()
+metadata = MetaData(
+    naming_convention={
+    "ix": 'ix_%(column_0_label)s',
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
+    }
+)
+
+
+db = SQLAlchemy(metadata=metadata)
 db.init_app(app)
 app.app_context().push()
 migrate = Migrate(app , db)
@@ -44,11 +57,11 @@ class Posts(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(1000),nullable=False)
     content = db.Column(db.Text,nullable=False)
-    author = db.Column(db.String(255))
+    #author = db.Column(db.String(255))
     date_posted = db.Column(db.DateTime,default = datetime.utcnow())
     slug = db.Column(db.String(255))
     hidden = db.Column(db.Boolean, default=False)
-    
+    poster_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
 
 
@@ -62,6 +75,7 @@ class Users(db.Model,UserMixin):
     fav_color = db.Column(db.String(50))
     password_hash = db.Column(db.String(128),nullable=False)
     datetime_created = db.Column(db.DateTime, default=datetime.utcnow)
+    posts = db.relationship('Posts', backref ='poster')
 
 
 
@@ -132,7 +146,8 @@ def post(id):
 def add_post():
     form = PostForm()
     if form.validate_on_submit():
-        post = Posts(title = form.title.data, content = form.content.data, author = form.author.data ,slug = form.slug.data)
+        poster = current_user.id
+        post = Posts(title = form.title.data, content = form.content.data, poster_id = poster, slug = form.slug.data)
         db.session.add(post)
         db.session.commit()
         flash("Post added successfully!!")
@@ -220,19 +235,20 @@ def delete(id):
 
 
 @app.route('/Update/<int:id>',methods=['POST','GET'])
+@login_required
 def update(id):
     form = UserForm()
     name_to_update =  Users.query.get_or_404(id)
 
     if request.method == 'POST':
-        name_to_update.username = request.form['username']
-        name_to_update.name = request.form['name']
-        name_to_update.email = request.form['email']
-        name_to_update.fav_color = request.form['fav_color']
+        name_to_update.username = form.username.data
+        name_to_update.name = form.name.data
+        name_to_update.email = form.email.data
+        name_to_update.fav_color = form.fav_color.data
         try:
             db.session.commit()
             flash("User updated successfully")
-            return render_template('update.html',form = form,name_to_update=name_to_update)     
+            return render_template('update.html',form = form,name_to_update=name_to_update,id = id)     
         except:
             flash("Oops Something went wrong... Try again!")
             return render_template('update.html',form = form,name_to_update=name_to_update)

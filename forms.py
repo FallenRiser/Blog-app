@@ -21,7 +21,7 @@ class test(FlaskForm):
 class PostForm(FlaskForm):
     title = StringField("Enter your title here", validators=[DataRequired()])
     content = StringField("Enter your content here", validators=[DataRequired()],widget=TextArea())
-    author =  StringField("Enter your author here", validators=[DataRequired()])
+    author =  StringField("Enter your author here")
     slug = StringField("Enter your slug here", validators=[DataRequired()])
     submit = SubmitField("Submit")
 

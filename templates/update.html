@@ -9,14 +9,7 @@
       </div>
     {% endfor %}    
 
-
-    {% if name %}
-        <h3>Update User!!</h3>
-        <br><br>
-        {% for user in our_users %}
-             {{user.id}}--{{user.name}}({{user.email}})-{{user.fav_color}}<br>
-        {% endfor %}
-    {% else %}
+{% if id == current_user.id %}
     <div class="shadow p-3 mb-5 bg-body-tertiary rounded">
         <h2>Update user...</h2>
         <br>
@@ -41,8 +34,15 @@
         </form> 
     </div>    
         <br><br>
-        
+        {% else %}
+        <div class="alert alert-primary alert-dismissible fade show" role="alert">
+	     Sorry! You Can't Edit This User...
+	    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	    </div>
 
-    {% endif %}
-        
+	    <h2>Access Denied!</h2>
+	    <p>Sorry, you cannot access this user profile...</p>
+
+        {% endif %} 
+
 {% endblock %}
