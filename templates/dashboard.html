@@ -18,13 +18,27 @@
       </div>
       <div class="card-body">
         <h5 class="card-title">This is My Bio </h5>
-        <p class="card-text"><strong>Name : {{current_user.name}}</strong><br>
+        <p class="card-text">
+          <div class="container">
+            <div class="row">
+              <div class="col-8">
+
+          <strong>Name : {{current_user.name}}</strong><br>
           <strong>Email : {{current_user.email}}</strong><br>
           <strong>User ID : {{current_user.id}}</strong><br>
           <strong>Favourite Colour : {{current_user.fav_color}}</strong><br>
-          <strong>Date Joined : {{current_user.datetime_created}}</strong><br></p>
+          <strong>Date Joined : {{current_user.datetime_created}}</strong><br>
+          <strong>About Me : {{current_user.user_bio}}</strong><br></p>
         <a href="{{url_for('logout' )}}" class="btn btn-secondary btn-sm">Logout</a>
         <a href="{{url_for('update',id=current_user.id )}}" class = "btn btn-secondary btn-sm">Update Profile</a>
+
+        
+      </div>
+      <div class="col-4">
+        <img src="{{url_for('static',filename='images/default_profile_picture.png')}}" width='150'  align="right">
+      </div>
+</div>
+</div>
       </div>
     </div>
     

@@ -74,6 +74,7 @@ class Users(db.Model,UserMixin):
     name = db.Column(db.String(75),nullable=False)
     email = db.Column(db.String(150),nullable=False,unique=True)
     fav_color = db.Column(db.String(50))
+    user_bio = db.Column(db.Text(50000), nullable=True)
     password_hash = db.Column(db.String(128),nullable=False)
     datetime_created = db.Column(db.DateTime, default=datetime.utcnow)
     posts = db.relationship('Posts', backref ='poster')
@@ -215,7 +216,7 @@ def add():
         user = Users.query.filter_by(email = form.email.data).first()
         if user is None:
             hashed_pass = generate_password_hash(form.password_hash.data,"sha256") 
-            user = Users(username = form.username.data, name = form.name.data, email = form.email.data, fav_color = form.fav_color.data, password_hash = hashed_pass)
+            user = Users(username = form.username.data, name = form.name.data, email = form.email.data, fav_color = form.fav_color.data, user_bio = form.user_bio.data, password_hash = hashed_pass)
             db.session.add(user)
             db.session.commit()    
         name = form.name.data
@@ -257,6 +258,7 @@ def update(id):
         name_to_update.name = form.name.data
         name_to_update.email = form.email.data
         name_to_update.fav_color = form.fav_color.data
+        name_to_update.user_bio = form.user_bio.data
         try:
             db.session.commit()
             flash("User updated successfully")
@@ -297,8 +299,15 @@ def search():
         posts = posts.order_by(Posts.title).all()
         return render_template('search.html',form= form , searched = post.searched, posts = posts)
 
-
-
+@app.route('/admin')
+@login_required
+def admin():
+    id = current_user.id
+    if id == 1:
+        return render_template('admin.html')
+    else:
+        flash("Sorry you must be admin to access this page!!!")
+        return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
     db.create_all()
