@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_user, login_required, LoginManager, logout_user, current_user
+from flask_ckeditor import CKEditor
 import os
 from forms import *
 
@@ -14,7 +15,7 @@ current_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'+ os.path.join(current_dir,"BlogApp.db")
 app.config['SECRET_KEY'] = 'this key is super dooper se bhi Uper VaLa SecRET'
-
+ckeditor = CKEditor(app)
 ####################################################### METADATA #####################################################################
 
 metadata = MetaData(
@@ -280,6 +281,21 @@ def namepage():
         flash("Name submitted successfully")
 
     return render_template('name.html', name= name, form= form)    
+
+@app.context_processor
+def base():
+    form = SearchForm()
+    return dict(form=form)
+
+@app.route('/search', methods=['POST'])
+def search():
+    form = SearchForm()
+    posts = Posts.query
+    if form.validate_on_submit():
+        post.searched = form.searched.data
+        posts = posts.filter(Posts.content.like('%' + post.searched + '%'))
+        posts = posts.order_by(Posts.title).all()
+        return render_template('search.html',form= form , searched = post.searched, posts = posts)
 
 
 

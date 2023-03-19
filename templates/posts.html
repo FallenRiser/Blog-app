@@ -15,7 +15,7 @@
         <h2>{{ post.title }}</h2><br>
             {{ post.poster.username }}<br>
             {{ post.slug}}|{{post.date_posted}}<br>
-            {{post.content}}
+            {{post.content|safe}}
             <br><br>
             <a href="{{url_for('post',id = post.id)}}" class="btn btn-outline-secondary">View Post</a>
             {% if post.poster.id == current_user.id %}
