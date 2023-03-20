@@ -3,6 +3,7 @@ from wtforms import StringField, SubmitField, PasswordField, BooleanField, Valid
 from wtforms.validators import DataRequired, EqualTo, Length
 from wtforms.widgets import TextArea
 from flask_ckeditor import CKEditorField
+from flask_wtf.file import FileField
 
 
 class UserForm(FlaskForm):
@@ -13,6 +14,7 @@ class UserForm(FlaskForm):
     user_bio = TextAreaField("Bio")
     password_hash = PasswordField("Enter your password",validators=[DataRequired(), EqualTo('password_hash2',message='Passwords must match.')])
     password_hash2 = PasswordField("Enter your password again",validators=[DataRequired()])
+    profile_pic = FileField('Profile picture')
     submit =  SubmitField("Submit")
 
 class test(FlaskForm):

@@ -6,7 +6,9 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_user, login_required, LoginManager, logout_user, current_user
 from flask_ckeditor import CKEditor
+from werkzeug.utils import secure_filename
 import os
+import uuid as uuid
 from forms import *
 
 
@@ -15,6 +17,8 @@ current_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'+ os.path.join(current_dir,"BlogApp.db")
 app.config['SECRET_KEY'] = 'this key is super dooper se bhi Uper VaLa SecRET'
+UPLOAD_FOLDER = os.path.join(current_dir,"static/images")
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ckeditor = CKEditor(app)
 ####################################################### METADATA #####################################################################
 
@@ -75,6 +79,7 @@ class Users(db.Model,UserMixin):
     email = db.Column(db.String(150),nullable=False,unique=True)
     fav_color = db.Column(db.String(50))
     user_bio = db.Column(db.Text(50000), nullable=True)
+    profile_pic = db.Column(db.String(), nullable = True)
     password_hash = db.Column(db.String(128),nullable=False)
     datetime_created = db.Column(db.DateTime, default=datetime.utcnow)
     posts = db.relationship('Posts', backref ='poster')
@@ -228,21 +233,26 @@ def add():
 
 
 @app.route('/delete/<int:id>')
+@login_required
 def delete(id):
     user_to_delete =  Users.query.get_or_404(id)
     name = None
     form = UserForm()
+    if id == current_user.id:
+        try:
+            db.session.delete(user_to_delete)
+            db.session.commit()
+            flash("User deleted successfully!!")
+            our_users = Users.query.order_by( Users.datetime_created)
+            return render_template('add_user.html',name=name,form=form,our_users=our_users)
+        except:    
+            flash("Oops!.. There was an error deleting the user") 
+            our_users = Users.query.order_by( Users.datetime_created)
+            return render_template('add_user.html',name=name,form=form,our_users=our_users)
+    else:
+        flash("You are not allowed to delete this user") 
+        return redirect(url_for('dashboard'))
 
-    try:
-        db.session.delete(user_to_delete)
-        db.session.commit()
-        flash("User deleted successfully!!")
-        our_users = Users.query.order_by( Users.datetime_created)
-        return render_template('add_user.html',name=name,form=form,our_users=our_users)
-    except:    
-        flash("Oops!.. There was an error deleting the user") 
-        our_users = Users.query.order_by( Users.datetime_created)
-        return render_template('add_user.html',name=name,form=form,our_users=our_users)
         
 
 
@@ -259,13 +269,30 @@ def update(id):
         name_to_update.email = form.email.data
         name_to_update.fav_color = form.fav_color.data
         name_to_update.user_bio = form.user_bio.data
-        try:
+        
+
+        if request.files['profile_pic']:
+            name_to_update.profile_pic = request.files['profile_pic']
+
+            pic_filename = secure_filename(name_to_update.profile_pic.filename)
+            pic_name = str(uuid.uuid1())+'$_'+ pic_filename
+            name_to_update.profile_pic = pic_name
+            saver = request.files['profile_pic']
+            saver.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
+
+            try:
+                db.session.commit()
+
+                flash("User updated successfully")
+                return render_template('update.html',form = form,name_to_update=name_to_update,id = id)     
+            except:
+                flash("Oops Something went wrong... Try again!")
+                return render_template('update.html',form = form,name_to_update=name_to_update)
+            
+        else:
             db.session.commit()
             flash("User updated successfully")
-            return render_template('update.html',form = form,name_to_update=name_to_update,id = id)     
-        except:
-            flash("Oops Something went wrong... Try again!")
-            return render_template('update.html',form = form,name_to_update=name_to_update)
+            return render_template('update.html',form = form,name_to_update=name_to_update,id = id)
     else:
         return render_template('update.html',form = form,name_to_update=name_to_update,id = id)
 

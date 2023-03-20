@@ -13,7 +13,7 @@
     <div class="shadow p-3 mb-5 bg-body-tertiary rounded">
         <h2>Update user...</h2>
         <br>
-        <form action="/Update/{{name_to_update.id}}" method="post">
+        <form action="/Update/{{name_to_update.id}}" method="post" enctype = 'multipart/form-data'>
             {{form.hidden_tag()}}
             
             {{form.username.label(class="form-label")}}
@@ -32,7 +32,9 @@
             {{form.user_bio(class="form-control",rows = "5", value = name_to_update.user_bio)}}-->
             Bio<br>
             <textarea class="form-control" name="user_bio">{{name_to_update.user_bio}}</textarea>
-
+            <br>
+            {{form.profile_pic.label(class="form-label")}}
+            {{form.profile_pic(class="form-control",value = name_to_update.profile_pic)}}
             <br>
             {{form.submit(class="btn btn-secondary")}}
 
