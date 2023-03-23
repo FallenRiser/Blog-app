@@ -66,7 +66,8 @@ class Posts(db.Model):
     date_posted = db.Column(db.DateTime,default = datetime.utcnow())
     slug = db.Column(db.String(255))
     hidden = db.Column(db.Boolean, default=False)
-    poster_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    poster_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete = "CASCADE"), nullable=False)
+    comments = db.relationship('Comment', backref ='post', passive_deletes = True)
 
 
 
@@ -82,8 +83,8 @@ class Users(db.Model,UserMixin):
     profile_pic = db.Column(db.String(), nullable = True)
     password_hash = db.Column(db.String(128),nullable=False)
     datetime_created = db.Column(db.DateTime, default=datetime.utcnow)
-    posts = db.relationship('Posts', backref ='poster')
-
+    posts = db.relationship('Posts', backref ='poster', cascade = 'all,delete-orphan')
+    comments = db.relationship('Comment', backref ='poster', passive_deletes = all)
 
 
     @property
@@ -102,6 +103,15 @@ class Users(db.Model,UserMixin):
     def __repr__(self):
         return '<Name %r>' % self.name
     
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(500),nullable=False)
+    date_posted = db.Column(db.DateTime,default = datetime.utcnow())
+    poster_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete = "CASCADE"), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id', ondelete = "CASCADE"), nullable=False)
+
+
 
 
 #Login route
@@ -142,10 +152,22 @@ def posts():
     return render_template('posts.html',posts = posts)
 
 
-@app.route('/posts/<int:id>')
+@app.route('/posts/<int:id>', methods = ['GET','POST'])
 def post(id):
     post = Posts.query.get_or_404(id)
-    return render_template('post.html',post = post)
+    form = CommentForm()
+    if form.validate_on_submit() and current_user.is_authenticated:
+        try:
+            comment = Comment(content = form.content.data , poster = current_user, post_id = post.id)
+            db.session.add(comment)
+            db.session.commit()
+            flash('Comment added successfully','success')
+            return redirect(url_for('post',id = id))
+        except:
+            flash('Error occured while adding comment','danger')
+            db.session.rollback()
+    comments = Comment.query.filter_by(post_id = id).order_by(Comment.date_posted.desc())
+    return render_template('post.html',post = post, comments = comments, form = form, id = post.id)
 
 
 @app.route('/add_post', methods=['POST','GET'])
@@ -161,6 +183,7 @@ def add_post():
         return redirect(url_for('add_post'))
     
     return render_template('add_post.html',form=form)
+
 
 
 @app.route('/post/edit/<int:id>', methods=['POST','GET'])
@@ -212,6 +235,7 @@ def delete_post(id):
         return render_template('posts.html',posts = posts)
 
 
+
 @app.route('/Users/Add',methods=['POST','GET'])
 def add():
     name = None
@@ -244,6 +268,7 @@ def delete(id):
             db.session.commit()
             flash("User deleted successfully!!")
             our_users = Users.query.order_by( Users.datetime_created)
+            logout_user()
             return render_template('add_user.html',name=name,form=form,our_users=our_users)
         except:    
             flash("Oops!.. There was an error deleting the user") 
