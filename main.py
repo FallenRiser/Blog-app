@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import os
 import uuid as uuid
 from forms import *
+from flask import jsonify
 
 
 
@@ -68,6 +69,22 @@ class Posts(db.Model):
     hidden = db.Column(db.Boolean, default=False)
     poster_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete = "CASCADE"), nullable=False)
     comments = db.relationship('Comment', backref ='post', passive_deletes = True)
+    likes = db.relationship('Likes', backref ='post', passive_deletes = True)
+
+    def like(self, user):
+        if not self.is_liked_by(user):
+            like = Likes(user=user, post=self)
+            db.session.add(like)
+            db.session.commit()
+
+    def unlike(self, user):
+        like = Likes.query.filter_by(user=user, post=self).first()
+        if like:
+            db.session.delete(like)
+            db.session.commit()
+
+    def is_liked_by(self, user):
+        return Likes.query.filter_by(user=user, post=self).count() > 0
 
 
 
@@ -84,7 +101,8 @@ class Users(db.Model,UserMixin):
     password_hash = db.Column(db.String(128),nullable=False)
     datetime_created = db.Column(db.DateTime, default=datetime.utcnow)
     posts = db.relationship('Posts', backref ='poster', cascade = 'all,delete-orphan')
-    comments = db.relationship('Comment', backref ='poster', passive_deletes = all)
+    comments = db.relationship('Comment', backref ='poster', passive_deletes = True)
+    likes = db.relationship('Likes', backref='poster', passive_deletes = True)
 
 
     @property
@@ -111,7 +129,15 @@ class Comment(db.Model):
     poster_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete = "CASCADE"), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id', ondelete = "CASCADE"), nullable=False)
 
+class Likes(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    date_liked = db.Column(db.DateTime, default=datetime.utcnow())
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id', ondelete = "CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete = "CASCADE"), nullable=False)
 
+    def __repr__(self):
+        return f"Like('{self.date_liked}')"
+    
 
 
 #Login route
@@ -167,8 +193,24 @@ def post(id):
             flash('Error occured while adding comment','danger')
             db.session.rollback()
     comments = Comment.query.filter_by(post_id = id).order_by(Comment.date_posted.desc())
-    return render_template('post.html',post = post, comments = comments, form = form, id = post.id)
+    likes = len(post.likes)
+    return render_template('post.html',post = post, comments = comments, form = form, id = post.id, likes = likes)
 
+@app.route('/posts/<int:id>/like',methods=['POST'])
+@login_required
+def like_post(id):
+    post = Posts.query.filter_by(id = id)
+    like = Likes.query.filter_by(user_id = current_user.id, post_id = id).first()
+    if not post:
+        flash('Post does not exist', 'danger')
+    elif like:
+        db.session.delete(like)
+        db.session.commit()
+    else:
+        like = Likes(user_id = current_user.id, post_id = id)
+        db.session.add(like)
+        db.session.commit()
+    return redirect(url_for('post', id=id))    
 
 @app.route('/add_post', methods=['POST','GET'])
 @login_required
@@ -233,6 +275,18 @@ def delete_post(id):
         flash("You aren't authorized to delete this post!!!!")
         posts = Posts.query.order_by(Posts.date_posted and Posts.hidden == False)
         return render_template('posts.html',posts = posts)
+
+@app.route('/post/<int:post_id>/comment/<int:comment_id>/delete', methods=['POST', 'DELETE'])
+@login_required
+def delete_comment(post_id, comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    if comment.poster != current_user:
+        flash('You are not authorized to delete this comment') 
+    db.session.delete(comment)
+    db.session.commit()
+    flash('Comment deleted successfully', 'success')
+    return redirect(url_for('post', id=post_id))
+
 
 
 
